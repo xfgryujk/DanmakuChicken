@@ -3,9 +3,14 @@
 #include "msxml2.h"
 #include "rapidjson/document.h"
 using namespace rapidjson;
+using namespace std;
 
 
-Danmaku::Danmaku(const CString& content, FontFamily* font, REAL size)
+// 获取弹幕的地址
+const CString DANMAKU_URL = _T("http://buaaacg.org/wx/danmaku.php");
+
+
+Danmaku::Danmaku(const CString& content, const FontFamily* font, REAL size)
 {
 	m_content = content;
 
@@ -27,31 +32,42 @@ Danmaku::Danmaku(const CString& content, FontFamily* font, REAL size)
 	m_dc.ReleaseDC();
 }
 
-DanmakuManager::DanmakuManager()
+Danmaku::Danmaku(Danmaku&& other)
 {
-	m_danmakuBoxSize.Width = 800;
-	m_danmakuBoxSize.Height = 600;
-	m_danmakuFont = new FontFamily(L"黑体");
-	m_danmakuSize = 40.0F;
-	m_danmakuSpeed = 6;
+	*this = move(other);
+}
 
+Danmaku& Danmaku::operator= (Danmaku&& other)
+{
+	m_content = move(other.m_content);
+	m_pos = move(other.m_pos);
+	m_size = move(other.m_size);
+	m_dc.Destroy();
+	m_dc.Attach(other.m_dc.Detach());
+	return *this;
+}
+
+
+DanmakuManager::DanmakuManager() :
+	m_danmakuFont(make_unique<FontFamily>(L"黑体"))
+{
 	// 获取弹幕线程
-	m_getNewThread = new std::thread([this]{
+	m_getNewThread = thread([this] {
 		CoInitializeEx(NULL, COINIT_MULTITHREADED);
 
 		{ // 取最后弹幕ID
-			CComPtr<IServerXMLHTTPRequest> m_xml;
-			m_xml.CoCreateInstance(__uuidof(ServerXMLHTTP));
-			m_xml->open(_bstr_t("GET"), _bstr_t("http://xfgryujk.tk/wx/danmaku.php?action=getlastid"), _variant_t(false), _variant_t(), _variant_t());
-			m_xml->send(_variant_t());
-			_bstr_t text;
-			if (SUCCEEDED(m_xml->get_responseText(text.GetAddress())))
-			{
-				Document document;
-				document.Parse(text);
-				if (!document.HasParseError() && document.IsObject())
-					m_lastDanmakuID = document["lastid"].GetInt();
-			}
+		CComPtr<IServerXMLHTTPRequest> m_xml;
+		m_xml.CoCreateInstance(__uuidof(ServerXMLHTTP));
+		m_xml->open(_bstr_t("GET"), _bstr_t(DANMAKU_URL + _T("?action=getlastid")), _variant_t(false), _variant_t(), _variant_t());
+		m_xml->send(_variant_t());
+		_bstr_t text;
+		if (SUCCEEDED(m_xml->get_responseText(text.GetAddress())))
+		{
+			Document document;
+			document.Parse(text);
+			if (!document.HasParseError() && document.IsObject())
+				m_lastDanmakuID = document["lastid"].GetInt();
+		}
 		}
 
 		while (!m_stopThreads)
@@ -64,32 +80,22 @@ DanmakuManager::DanmakuManager()
 	});
 
 	// 更新弹幕线程
-	m_updateThread = new std::thread([this]{
+	m_updateThread = thread([this] {
 		while (!m_stopThreads)
 		{
 			UpdateDanmaku();
-			Sleep(33);
+			Sleep(1000 / 30); // 30fps
 		}
 	});
-
 }
 
 DanmakuManager::~DanmakuManager()
 {
 	m_stopThreads = TRUE;
-	if (m_getNewThread != NULL)
-	{
-		m_getNewThread->join();
-		delete m_getNewThread;
-	}
-	if (m_updateThread != NULL)
-	{
-		m_updateThread->join();
-		delete m_updateThread;
-	}
-
-	if (m_danmakuFont != NULL)
-		delete m_danmakuFont;
+	if (m_getNewThread.joinable())
+		m_getNewThread.join();
+	if (m_updateThread.joinable())
+		m_updateThread.join();
 }
 
 // 获取新弹幕，添加到m_danmakuSet
@@ -98,71 +104,65 @@ void DanmakuManager::GetNewDanmaku()
 	CComPtr<IServerXMLHTTPRequest> m_xml;
 	m_xml.CoCreateInstance(__uuidof(ServerXMLHTTP));
 	CString url;
-	url.Format(_T("http://xfgryujk.tk/wx/danmaku.php?action=getdanmaku&start=%d"), m_lastDanmakuID + 1);
+	url.Format(DANMAKU_URL + _T("?action=getdanmaku&start=%d"), m_lastDanmakuID + 1);
 	m_xml->open(_bstr_t("GET"), _bstr_t(url), _variant_t(false), _variant_t(), _variant_t());
 	m_xml->send(_variant_t());
 	_bstr_t text;
 	if (FAILED(m_xml->get_responseText(text.GetAddress())))
 		return;
-	Document document;
+	GenericDocument<UTF16<> > document;
 	document.Parse(text);
 	if (document.HasParseError() || !document.IsArray())
 		return;
 
 	for (auto it = document.Begin(); it != document.End(); ++it)
 	{
-		int id = (*it)["id"].GetInt();
+		int id = (*it)[L"id"].GetInt();
 		if (id > m_lastDanmakuID)
 			m_lastDanmakuID = id;
 
-		// 转码
-		int dstLen = MultiByteToWideChar(CP_UTF8, 0, (*it)["content"].GetString(), (*it)["content"].GetStringLength(), NULL, 0);
-		if (dstLen == 0)
-			continue;
-		CStringW content;
-		MultiByteToWideChar(CP_UTF8, 0, (*it)["content"].GetString(), (*it)["content"].GetStringLength(), content.GetBuffer(dstLen), dstLen);
-		content.ReleaseBuffer(dstLen);
-		AddDanmaku(content);
+		AddDanmaku((*it)[L"content"].GetString());
 	}
 }
 
 // 添加新弹幕
 void DanmakuManager::AddDanmaku(const CString& content)
 {
-	std::unique_ptr<Danmaku> danmaku(new Danmaku(content, m_danmakuFont, m_danmakuSize));
-	danmaku->m_pos.X = m_danmakuBoxSize.Width;
-	danmaku->m_pos.Y = 0;
+	Danmaku danmaku(content, m_danmakuFont.get(), m_danmakuSize);
+	danmaku.m_pos.X = m_danmakuBoxSize.Width;
+	danmaku.m_pos.Y = 0;
 
 	// 寻找不被遮挡的Y坐标
 	BOOL hasCollision;
-	do {
+	do
+	{
 		hasCollision = FALSE;
-		std::lock_guard<decltype(m_danmakuSetLock)> lock(m_danmakuSetLock);
+		lock_guard<decltype(m_danmakuSetLock)> lock(m_danmakuSetLock);
 		for (const auto& i : m_danmakuSet)
 		{
 			// 有碰撞
-			if (i->m_pos.X + i->m_size.Width > danmaku->m_pos.X && i->m_pos.X < danmaku->m_pos.X + danmaku->m_size.Width
-				&& i->m_pos.Y + i->m_size.Height > danmaku->m_pos.Y && i->m_pos.Y < danmaku->m_pos.Y + danmaku->m_size.Height)
+			if (i.m_pos.X + i.m_size.Width > danmaku.m_pos.X && i.m_pos.X < danmaku.m_pos.X + danmaku.m_size.Width
+				&& i.m_pos.Y + i.m_size.Height > danmaku.m_pos.Y && i.m_pos.Y < danmaku.m_pos.Y + danmaku.m_size.Height)
 			{
-				danmaku->m_pos.Y = i->m_pos.Y + i->m_size.Height;
+				danmaku.m_pos.Y = i.m_pos.Y + i.m_size.Height;
 				hasCollision = TRUE;
 				break;
 			}
 		}
-	} while (hasCollision && danmaku->m_pos.Y + danmaku->m_size.Height <= m_danmakuBoxSize.Height);
+	} while (hasCollision && danmaku.m_pos.Y + danmaku.m_size.Height <= m_danmakuBoxSize.Height);
 
-	std::lock_guard<decltype(m_danmakuSetLock)> lock(m_danmakuSetLock);
-	m_danmakuSet.push_back(std::move(danmaku));
+	lock_guard<decltype(m_danmakuSetLock)> lock(m_danmakuSetLock);
+	m_danmakuSet.push_back(move(danmaku));
 }
 
 // 更新弹幕位置
 void DanmakuManager::UpdateDanmaku()
 {
-	std::lock_guard<decltype(m_danmakuSetLock)> lock(m_danmakuSetLock);
+	lock_guard<decltype(m_danmakuSetLock)> lock(m_danmakuSetLock);
 	for (auto it = m_danmakuSet.begin(); it != m_danmakuSet.end(); )
 	{
-		(*it)->m_pos.X -= m_danmakuSpeed;
-		if ((*it)->m_pos.X + (*it)->m_size.Width <= 0) // 删除边界外的弹幕
+		it->m_pos.X -= m_danmakuSpeed;
+		if (it->m_pos.X + it->m_size.Width <= 0) // 删除边界外的弹幕
 			it = m_danmakuSet.erase(it);
 		else
 			++it;
@@ -172,7 +172,7 @@ void DanmakuManager::UpdateDanmaku()
 // 渲染m_danmakuSet到hdc
 void DanmakuManager::RenderDanmakuSet(HDC hdc)
 {
-	std::lock_guard<decltype(m_danmakuSetLock)> lock(m_danmakuSetLock);
+	lock_guard<decltype(m_danmakuSetLock)> lock(m_danmakuSetLock);
 	for (const auto& i : m_danmakuSet)
-		i->m_dc.AlphaBlend(hdc, i->m_pos.X, i->m_pos.Y, 255, AC_SRC_OVER);
+		i.m_dc.AlphaBlend(hdc, i.m_pos.X, i.m_pos.Y, 255, AC_SRC_OVER);
 }

@@ -1,4 +1,4 @@
-// OverlayDlg.cpp : ÊµÏÖÎÄ¼ş
+ï»¿// OverlayDlg.cpp : å®ç°æ–‡ä»¶
 //
 
 #include "stdafx.h"
@@ -6,14 +6,14 @@
 #include "OverlayDlg.h"
 
 
-// COverlayDlg ¶Ô»°¿ò
+// COverlayDlg å¯¹è¯æ¡†
 
 IMPLEMENT_DYNAMIC(COverlayDlg, CDialog)
 
 COverlayDlg::COverlayDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(COverlayDlg::IDD, pParent)
 {
-	// È«ÆÁ
+	// å…¨å±
 	m_size.cx = GetSystemMetrics(SM_CXSCREEN);
 	m_size.cy = GetSystemMetrics(SM_CYSCREEN);
 	m_danmakuManager.m_danmakuBoxSize.Width = m_size.cx;
@@ -35,37 +35,37 @@ BEGIN_MESSAGE_MAP(COverlayDlg, CDialog)
 END_MESSAGE_MAP()
 
 
-// COverlayDlg ÏûÏ¢´¦Àí³ÌĞò
+// COverlayDlg æ¶ˆæ¯å¤„ç†ç¨‹åº
 
 
 BOOL COverlayDlg::OnInitDialog()
 {
 	CDialog::OnInitDialog();
 
-	// È«ÆÁ
+	// å…¨å±
 	MoveWindow(0, 0, m_size.cx, m_size.cy);
 
-	// ´´½¨DC
+	// åˆ›å»ºDC
 	m_dc.Create(m_size.cx, m_size.cy, 32, CImage::createAlphaChannel);
 
-	// äÖÈ¾Ïß³Ì
-	m_renderThread = new std::thread([this]{
+	// æ¸²æŸ“çº¿ç¨‹
+	m_renderThread = std::thread([this] {
 		while (!m_stopThreads)
 		{
-			// Çå³ıDC
+			// æ¸…é™¤DC
 			for (int y = 0; y < m_size.cy; y++)
 				memset(m_dc.GetPixelAddress(0, y), 0, 4 * m_size.cx);
-			// äÖÈ¾
+			// æ¸²æŸ“
 			m_danmakuManager.RenderDanmakuSet(m_dc.GetDC());
 			m_dc.ReleaseDC();
 			UpdateUI();
 
-			Sleep(33);
+			Sleep(1000 / 30); // 30fps
 		}
 	});
 
 	return TRUE;  // return TRUE unless you set the focus to a control
-	// Òì³£:  OCX ÊôĞÔÒ³Ó¦·µ»Ø FALSE
+	// å¼‚å¸¸:  OCX å±æ€§é¡µåº”è¿”å› FALSE
 }
 
 void COverlayDlg::OnDestroy()
@@ -73,23 +73,24 @@ void COverlayDlg::OnDestroy()
 	CDialog::OnDestroy();
 
 	m_stopThreads = TRUE;
-	if (m_renderThread != NULL)
-	{
-		m_renderThread->join();
-		delete m_renderThread;
-	}
+	if (m_renderThread.joinable())
+		m_renderThread.join();
 }
 
-// ÏÔÊ¾m_dcµÄÍ¼Ïñ
+// æ˜¾ç¤ºm_dcçš„å›¾åƒ
 void COverlayDlg::UpdateUI()
 {
-	CClientDC windowDC(this);
-	POINT point{ 0, 0 };
+	POINT point = { 0, 0 };
 	BLENDFUNCTION bf;
 	bf.AlphaFormat = AC_SRC_ALPHA;
 	bf.BlendFlags = 0;
 	bf.BlendOp = AC_SRC_OVER;
 	bf.SourceConstantAlpha = 255;
-	::UpdateLayeredWindow(*this, windowDC, &point, &m_size, m_dc.GetDC(), &point, 0, &bf, ULW_ALPHA);
+
+	CClientDC windowDC(this);
+	CDC dc;
+	dc.Attach(m_dc.GetDC());
+	UpdateLayeredWindow(&windowDC, &point, &m_size, &dc, &point, 0, &bf, ULW_ALPHA);
+	dc.Detach();
 	m_dc.ReleaseDC();
 }

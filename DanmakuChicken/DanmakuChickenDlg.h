@@ -1,5 +1,5 @@
-
-// DanmakuChickenDlg.h : Í·ÎÄ¼ş
+ï»¿
+// DanmakuChickenDlg.h : å¤´æ–‡ä»¶
 //
 
 #pragma once
@@ -7,25 +7,25 @@
 #include "afxwin.h"
 
 
-// CDanmakuChickenDlg ¶Ô»°¿ò
+// CDanmakuChickenDlg å¯¹è¯æ¡†
 class CDanmakuChickenDlg : public CDialogEx
 {
-// ¹¹Ôì
+// æ„é€ 
 public:
-	CDanmakuChickenDlg(CWnd* pParent = NULL);	// ±ê×¼¹¹Ôìº¯Êı
+	CDanmakuChickenDlg(CWnd* pParent = NULL);	// æ ‡å‡†æ„é€ å‡½æ•°
 
-// ¶Ô»°¿òÊı¾İ
+// å¯¹è¯æ¡†æ•°æ®
 	enum { IDD = IDD_DANMAKUCHICKEN_DIALOG };
 
 	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV Ö§³Ö
+	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV æ”¯æŒ
 
 
-// ÊµÏÖ
+// å®ç°
 protected:
 	HICON m_hIcon;
 
-	// Éú³ÉµÄÏûÏ¢Ó³Éäº¯Êı
+	// ç”Ÿæˆçš„æ¶ˆæ¯æ˜ å°„å‡½æ•°
 	virtual BOOL OnInitDialog();
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
@@ -36,8 +36,7 @@ public:
 	afx_msg void OnBnClickedButton2();
 
 
-	ULONG_PTR m_gdiplusToken;
-	COverlayDlg* m_overlayDlg = NULL;
+	COverlayDlg m_overlayDlg;
 
 	CEdit m_danmakuSizeEdit;
 	CEdit m_danmakuSpeedEdit;

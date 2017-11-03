@@ -1,22 +1,22 @@
-#pragma once
+ï»¿#pragma once
 #include "Danmaku.h"
 
 
-// COverlayDlg ¶Ô»°¿ò
+// COverlayDlg å¯¹è¯æ¡†
 
 class COverlayDlg : public CDialog
 {
 	DECLARE_DYNAMIC(COverlayDlg)
 
 public:
-	COverlayDlg(CWnd* pParent = NULL);   // ±ê×¼¹¹Ôìº¯Êı
+	COverlayDlg(CWnd* pParent = NULL);   // æ ‡å‡†æ„é€ å‡½æ•°
 	virtual ~COverlayDlg();
 
-// ¶Ô»°¿òÊı¾İ
+// å¯¹è¯æ¡†æ•°æ®
 	enum { IDD = IDD_OVERLAY_DIALOG };
 
 protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV Ö§³Ö
+	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV æ”¯æŒ
 
 	DECLARE_MESSAGE_MAP()
 public:
@@ -28,6 +28,6 @@ public:
 	DanmakuManager m_danmakuManager;
 	SIZE m_size;
 	CImage m_dc;
-	std::thread* m_renderThread = NULL;
+	std::thread m_renderThread;
 	BOOL m_stopThreads = FALSE;
 };
