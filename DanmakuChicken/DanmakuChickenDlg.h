@@ -5,6 +5,7 @@
 #pragma once
 #include "OverlayDlg.h"
 #include "afxwin.h"
+#include "afxcmn.h"
 
 
 // CDanmakuChickenDlg 对话框
@@ -32,12 +33,13 @@ protected:
 	DECLARE_MESSAGE_MAP()
 public:
 	afx_msg void OnDestroy();
-	afx_msg void OnBnClickedButton1();
+	afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
 	afx_msg void OnBnClickedButton2();
 
 
 	COverlayDlg m_overlayDlg;
 
-	CEdit m_danmakuSizeEdit;
-	CEdit m_danmakuSpeedEdit;
+	CSliderCtrl m_danmakuSizeSlider;
+	CSliderCtrl m_danmakuSpeedSlider;
+	CSliderCtrl m_danmakuOpacitySlider;
 };

@@ -174,5 +174,5 @@ void DanmakuManager::RenderDanmakuSet(HDC hdc)
 {
 	lock_guard<decltype(m_danmakuSetLock)> lock(m_danmakuSetLock);
 	for (const auto& i : m_danmakuSet)
-		i.m_dc.AlphaBlend(hdc, i.m_pos.X, i.m_pos.Y, 255, AC_SRC_OVER);
+		i.m_dc.AlphaBlend(hdc, i.m_pos.X, i.m_pos.Y, m_danmakuAlpha, AC_SRC_OVER);
 }

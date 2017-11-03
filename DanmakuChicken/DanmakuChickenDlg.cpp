@@ -25,16 +25,17 @@ CDanmakuChickenDlg::CDanmakuChickenDlg(CWnd* pParent /*=NULL*/)
 void CDanmakuChickenDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
-	DDX_Control(pDX, IDC_EDIT1, m_danmakuSizeEdit);
-	DDX_Control(pDX, IDC_EDIT2, m_danmakuSpeedEdit);
+	DDX_Control(pDX, IDC_SLIDER1, m_danmakuSizeSlider);
+	DDX_Control(pDX, IDC_SLIDER2, m_danmakuSpeedSlider);
+	DDX_Control(pDX, IDC_SLIDER3, m_danmakuOpacitySlider);
 }
 
 BEGIN_MESSAGE_MAP(CDanmakuChickenDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 ON_WM_DESTROY()
-ON_BN_CLICKED(IDC_BUTTON1, &CDanmakuChickenDlg::OnBnClickedButton1)
 ON_BN_CLICKED(IDC_BUTTON2, &CDanmakuChickenDlg::OnBnClickedButton2)
+ON_WM_HSCROLL()
 END_MESSAGE_MAP()
 
 
@@ -85,8 +86,12 @@ BOOL CDanmakuChickenDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// 设置大图标
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
-	m_danmakuSizeEdit.SetWindowText(_T("40"));
-	m_danmakuSpeedEdit.SetWindowText(_T("6"));
+	m_danmakuSizeSlider.SetRange(20, 100);
+	m_danmakuSizeSlider.SetPos((int)m_overlayDlg.m_danmakuManager.m_danmakuSize);
+	m_danmakuSpeedSlider.SetRange(1, 100);
+	m_danmakuSpeedSlider.SetPos(m_overlayDlg.m_danmakuManager.m_danmakuSpeed);
+	m_danmakuOpacitySlider.SetRange(255 * 10 / 100, 255);
+	m_danmakuOpacitySlider.SetPos(m_overlayDlg.m_danmakuManager.m_danmakuAlpha);
 
 	// 载入弹幕窗口
 	m_overlayDlg.Create(m_overlayDlg.IDD, GetDesktopWindow());
@@ -103,13 +108,25 @@ void CDanmakuChickenDlg::OnDestroy()
 }
 
 // 修改弹幕设置
-void CDanmakuChickenDlg::OnBnClickedButton1()
+void CDanmakuChickenDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 {
-	CString strBuf;
-	m_danmakuSizeEdit.GetWindowText(strBuf);
-	m_overlayDlg.m_danmakuManager.m_danmakuSize = (float)_ttof(strBuf);
-	m_danmakuSpeedEdit.GetWindowText(strBuf);
-	m_overlayDlg.m_danmakuManager.m_danmakuSpeed = _ttoi(strBuf);
+	if (nSBCode == SB_THUMBTRACK)
+	{
+		switch (pScrollBar->GetDlgCtrlID())
+		{
+		case IDC_SLIDER1:
+			m_overlayDlg.m_danmakuManager.m_danmakuSize = (float)nPos;
+			break;
+		case IDC_SLIDER2:
+			m_overlayDlg.m_danmakuManager.m_danmakuSpeed = nPos;
+			break;
+		case IDC_SLIDER3:
+			m_overlayDlg.m_danmakuManager.m_danmakuAlpha = nPos;
+			break;
+		}
+	}
+
+	CDialogEx::OnHScroll(nSBCode, nPos, pScrollBar);
 }
 
 // 测试弹幕

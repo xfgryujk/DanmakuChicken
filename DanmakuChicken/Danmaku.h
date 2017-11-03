@@ -39,6 +39,8 @@ public:
 	REAL m_danmakuSize = 40.0F;
 	// 弹幕滚动速度
 	int m_danmakuSpeed = 6;
+	// 弹幕不透明度
+	int m_danmakuAlpha = 255 * 80 / 100;
 
 	// 获取弹幕线程
 	std::thread m_getNewThread;
