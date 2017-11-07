@@ -14,8 +14,8 @@ COverlayDlg::COverlayDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(COverlayDlg::IDD, pParent)
 {
 	// 全屏
-	m_size.cx = GetSystemMetrics(SM_CXSCREEN);
-	m_size.cy = GetSystemMetrics(SM_CYSCREEN);
+	m_size.cx = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+	m_size.cy = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 	m_danmakuManager.m_danmakuBoxSize.Width = m_size.cx;
 	m_danmakuManager.m_danmakuBoxSize.Height = m_size.cy;
 }
@@ -43,7 +43,9 @@ BOOL COverlayDlg::OnInitDialog()
 	CDialog::OnInitDialog();
 
 	// 全屏
-	MoveWindow(0, 0, m_size.cx, m_size.cy);
+	int x = GetSystemMetrics(SM_XVIRTUALSCREEN);
+	int y = GetSystemMetrics(SM_YVIRTUALSCREEN);
+	MoveWindow(x, y, m_size.cx, m_size.cy);
 
 	// 创建DC
 	m_dc.Create(m_size.cx, m_size.cy, 32, CImage::createAlphaChannel);
@@ -80,7 +82,11 @@ void COverlayDlg::OnDestroy()
 // 显示m_dc的图像
 void COverlayDlg::UpdateUI()
 {
-	POINT point = { 0, 0 };
+	CRect wndRect;
+	GetWindowRect(wndRect);
+	CSize wndSize = wndRect.Size();
+
+	POINT pointSrc = { 0, 0 };
 	BLENDFUNCTION bf;
 	bf.AlphaFormat = AC_SRC_ALPHA;
 	bf.BlendFlags = 0;
@@ -90,7 +96,7 @@ void COverlayDlg::UpdateUI()
 	CClientDC windowDC(this);
 	CDC dc;
 	dc.Attach(m_dc.GetDC());
-	UpdateLayeredWindow(&windowDC, &point, &m_size, &dc, &point, 0, &bf, ULW_ALPHA);
+	UpdateLayeredWindow(&windowDC, &wndRect.TopLeft(), &wndSize, &dc, &pointSrc, 0, &bf, ULW_ALPHA);
 	dc.Detach();
 	m_dc.ReleaseDC();
 }

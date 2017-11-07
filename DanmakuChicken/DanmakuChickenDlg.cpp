@@ -132,5 +132,5 @@ void CDanmakuChickenDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollB
 // 测试弹幕
 void CDanmakuChickenDlg::OnBnClickedButton2()
 {
-	m_overlayDlg.m_danmakuManager.AddDanmaku(_T("测试TEST1234asdfasdfasdf！！！"));
+	m_overlayDlg.m_danmakuManager.AddDanmaku(_T("我能吞下玻璃而不伤身体"));
 }
