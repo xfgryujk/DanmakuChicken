@@ -4,6 +4,7 @@
 #include "rapidjson/document.h"
 using namespace rapidjson;
 using namespace std;
+using namespace Gdiplus;
 
 
 // 获取弹幕的地址
@@ -15,21 +16,21 @@ Danmaku::Danmaku(const CString& content, const FontFamily* font, REAL size)
 	m_content = content;
 
 	GraphicsPath path;
-	path.AddString(m_content, -1, font, FontStyle::FontStyleBold, size, Point(0, 0), Gdiplus::StringFormat::GenericDefault());
+	path.AddString(m_content, -1, font, FontStyle::FontStyleBold, size, Point(0, 0), StringFormat::GenericDefault());
 
+	Pen blackPen(Color::Black, 1.5F);
 	Rect rect;
-	path.GetBounds(&rect);
-	m_size.Width = int(rect.Width * 1.1);
-	m_size.Height = int(rect.Height * 1.1); // 对于纯英文还是大小不够，不管了...
+	path.GetBounds(&rect, NULL, &blackPen);
+	m_size.Width = rect.Width;
+	m_size.Height = rect.Height;
 
-	m_dc.Create(m_size.Width, m_size.Height, 32, CImage::createAlphaChannel);
-	Gdiplus::Graphics graph(m_dc.GetDC());
+	m_img.Create(m_size.Width, m_size.Height, 32, CImage::createAlphaChannel);
+	Graphics graph(m_img.GetDC());
 	graph.SetSmoothingMode(SmoothingMode::SmoothingModeAntiAlias);
-	Gdiplus::SolidBrush whiteBrush(Color::White);
+	SolidBrush whiteBrush(Color::White);
 	graph.FillPath(&whiteBrush, &path);
-	Gdiplus::Pen blackPen(Gdiplus::Color::Black, 1.5F);
 	graph.DrawPath(&blackPen, &path);
-	m_dc.ReleaseDC();
+	m_img.ReleaseDC();
 }
 
 Danmaku::Danmaku(Danmaku&& other)
@@ -42,8 +43,8 @@ Danmaku& Danmaku::operator= (Danmaku&& other)
 	m_content = move(other.m_content);
 	m_pos = move(other.m_pos);
 	m_size = move(other.m_size);
-	m_dc.Destroy();
-	m_dc.Attach(other.m_dc.Detach());
+	m_img.Destroy();
+	m_img.Attach(other.m_img.Detach());
 	return *this;
 }
 
@@ -174,5 +175,5 @@ void DanmakuManager::RenderDanmakuSet(HDC hdc)
 {
 	lock_guard<decltype(m_danmakuSetLock)> lock(m_danmakuSetLock);
 	for (const auto& i : m_danmakuSet)
-		i.m_dc.AlphaBlend(hdc, i.m_pos.X, i.m_pos.Y, m_danmakuAlpha, AC_SRC_OVER);
+		i.m_img.AlphaBlend(hdc, i.m_pos.X, i.m_pos.Y, m_danmakuAlpha, AC_SRC_OVER);
 }

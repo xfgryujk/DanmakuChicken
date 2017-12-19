@@ -12,10 +12,10 @@ public:
 	CString m_content;
 	Point m_pos;
 	Size m_size;
-	CImage m_dc;
+	CImage m_img;
 
 protected:
-	Danmaku(const CString& content, const FontFamily* font, REAL size);
+	Danmaku(const CString& content, const Gdiplus::FontFamily* font, REAL size);
 public:
 	Danmaku(const Danmaku& other) = delete;
 	Danmaku(Danmaku&& other);
@@ -34,7 +34,7 @@ public:
 	Size m_danmakuBoxSize = { 800, 600 };
 
 	// 弹幕字体
-	std::unique_ptr<FontFamily> m_danmakuFont;
+	std::unique_ptr<Gdiplus::FontFamily> m_danmakuFont;
 	// 弹幕字体大小
 	REAL m_danmakuSize = 40.0F;
 	// 弹幕滚动速度

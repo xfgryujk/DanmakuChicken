@@ -48,18 +48,18 @@ BOOL COverlayDlg::OnInitDialog()
 	MoveWindow(x, y, m_size.cx, m_size.cy);
 
 	// 创建DC
-	m_dc.Create(m_size.cx, m_size.cy, 32, CImage::createAlphaChannel);
+	m_bufferImg.Create(m_size.cx, m_size.cy, 32, CImage::createAlphaChannel);
 
 	// 渲染线程
 	m_renderThread = std::thread([this] {
 		while (!m_stopThreads)
 		{
-			// 清除DC
+			// 清除m_bufferImg
 			for (int y = 0; y < m_size.cy; y++)
-				memset(m_dc.GetPixelAddress(0, y), 0, 4 * m_size.cx);
+				memset(m_bufferImg.GetPixelAddress(0, y), 0, 4 * m_size.cx);
 			// 渲染
-			m_danmakuManager.RenderDanmakuSet(m_dc.GetDC());
-			m_dc.ReleaseDC();
+			m_danmakuManager.RenderDanmakuSet(m_bufferImg.GetDC());
+			m_bufferImg.ReleaseDC();
 			UpdateUI();
 
 			Sleep(1000 / 30); // 30fps
@@ -79,7 +79,7 @@ void COverlayDlg::OnDestroy()
 		m_renderThread.join();
 }
 
-// 显示m_dc的图像
+// 显示m_bufferImg的图像
 void COverlayDlg::UpdateUI()
 {
 	CRect wndRect;
@@ -95,8 +95,8 @@ void COverlayDlg::UpdateUI()
 
 	CClientDC windowDC(this);
 	CDC dc;
-	dc.Attach(m_dc.GetDC());
+	dc.Attach(m_bufferImg.GetDC());
 	UpdateLayeredWindow(&windowDC, &wndRect.TopLeft(), &wndSize, &dc, &pointSrc, 0, &bf, ULW_ALPHA);
 	dc.Detach();
-	m_dc.ReleaseDC();
+	m_bufferImg.ReleaseDC();
 }
