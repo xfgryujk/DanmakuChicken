@@ -27,7 +27,7 @@ public:
 
 	DanmakuManager m_danmakuManager;
 	SIZE m_size;
-	CImage m_dc;
+	CImage m_bufferImg;
 	std::thread m_renderThread;
 	BOOL m_stopThreads = FALSE;
 };
