@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import requests
-from time import sleep
 from threading import Thread
+from time import sleep
 
+import requests
 
 # 获取弹幕的地址
 DANMAKU_URL = 'http://buaaacg.org/wx/danmaku.php'
