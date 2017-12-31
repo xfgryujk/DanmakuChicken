@@ -1,0 +1,3 @@
+[submodule "Simple-Web-Server"]
+	path = Simple-Web-Server
+	url = git@github.com:eidheim/Simple-Web-Server.git
