@@ -42,8 +42,6 @@ public:
 	// 弹幕不透明度
 	int m_danmakuAlpha = 255 * 80 / 100;
 
-	// 获取弹幕线程
-	std::thread m_getNewThread;
 	// 更新弹幕线程
 	std::thread m_updateThread;
 	// 停止线程标志
@@ -57,8 +55,6 @@ public:
 	DanmakuManager(const DanmakuManager& other) = delete;
 	~DanmakuManager();
 
-	// 获取新弹幕，添加到m_danmakuSet
-	virtual void GetNewDanmaku();
 	// 添加新弹幕
 	virtual void AddDanmaku(const CString& content);
 	// 更新弹幕位置

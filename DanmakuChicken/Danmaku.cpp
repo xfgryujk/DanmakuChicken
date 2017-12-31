@@ -1,14 +1,7 @@
 ﻿#include "stdafx.h"
 #include "Danmaku.h"
-#include "msxml2.h"
-#include "rapidjson/document.h"
-using namespace rapidjson;
 using namespace std;
 using namespace Gdiplus;
-
-
-// 获取弹幕的地址
-const CString DANMAKU_URL = _T("http://buaaacg.org/wx/danmaku.php");
 
 
 Danmaku::Danmaku(const CString& content, const FontFamily* font, REAL size)
@@ -52,34 +45,6 @@ Danmaku& Danmaku::operator= (Danmaku&& other)
 DanmakuManager::DanmakuManager() :
 	m_danmakuFont(make_unique<FontFamily>(L"黑体"))
 {
-	// 获取弹幕线程
-	m_getNewThread = thread([this] {
-		CoInitializeEx(NULL, COINIT_MULTITHREADED);
-
-		{ // 取最后弹幕ID
-		CComPtr<IServerXMLHTTPRequest> m_xml;
-		m_xml.CoCreateInstance(__uuidof(ServerXMLHTTP));
-		m_xml->open(_bstr_t("GET"), _bstr_t(DANMAKU_URL + _T("?action=getlastid")), _variant_t(false), _variant_t(), _variant_t());
-		m_xml->send(_variant_t());
-		_bstr_t text;
-		if (SUCCEEDED(m_xml->get_responseText(text.GetAddress())))
-		{
-			Document document;
-			document.Parse(text);
-			if (!document.HasParseError() && document.IsObject())
-				m_lastDanmakuID = document["lastid"].GetInt();
-		}
-		}
-
-		while (!m_stopThreads)
-		{
-			GetNewDanmaku();
-			Sleep(2000);
-		}
-
-		CoUninitialize();
-	});
-
 	// 更新弹幕线程
 	m_updateThread = thread([this] {
 		while (!m_stopThreads)
@@ -93,37 +58,8 @@ DanmakuManager::DanmakuManager() :
 DanmakuManager::~DanmakuManager()
 {
 	m_stopThreads = TRUE;
-	if (m_getNewThread.joinable())
-		m_getNewThread.join();
 	if (m_updateThread.joinable())
 		m_updateThread.join();
-}
-
-// 获取新弹幕，添加到m_danmakuSet
-void DanmakuManager::GetNewDanmaku()
-{
-	CComPtr<IServerXMLHTTPRequest> m_xml;
-	m_xml.CoCreateInstance(__uuidof(ServerXMLHTTP));
-	CString url;
-	url.Format(DANMAKU_URL + _T("?action=getdanmaku&start=%d"), m_lastDanmakuID + 1);
-	m_xml->open(_bstr_t("GET"), _bstr_t(url), _variant_t(false), _variant_t(), _variant_t());
-	m_xml->send(_variant_t());
-	_bstr_t text;
-	if (FAILED(m_xml->get_responseText(text.GetAddress())))
-		return;
-	GenericDocument<UTF16<> > document;
-	document.Parse(text);
-	if (document.HasParseError() || !document.IsArray())
-		return;
-
-	for (auto it = document.Begin(); it != document.End(); ++it)
-	{
-		int id = (*it)[L"id"].GetInt();
-		if (id > m_lastDanmakuID)
-			m_lastDanmakuID = id;
-
-		AddDanmaku((*it)[L"content"].GetString());
-	}
 }
 
 // 添加新弹幕
