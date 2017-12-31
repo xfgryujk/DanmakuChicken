@@ -4,8 +4,14 @@
 
 #pragma once
 #include "OverlayDlg.h"
+#undef min
+#undef max
+#include "..\Simple-Web-Server\server_http.hpp"
+#include <thread>
 #include "afxwin.h"
 #include "afxcmn.h"
+
+using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 
 // CDanmakuChickenDlg 对话框
@@ -36,8 +42,13 @@ public:
 	afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
 	afx_msg void OnBnClickedButton2();
 
+	// 处理添加弹幕请求
+	void HandleAddDanmaku(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request);
+
 
 	COverlayDlg m_overlayDlg;
+	HttpServer m_server;
+	std::thread m_serverThread;
 
 	CSliderCtrl m_danmakuSizeSlider;
 	CSliderCtrl m_danmakuSpeedSlider;

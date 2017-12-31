@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="头文件\RapidJSON">
-      <UniqueIdentifier>{d323829e-10b1-404d-a5ea-e998630e0e34}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DanmakuChicken.h">
@@ -38,111 +35,6 @@
     </ClInclude>
     <ClInclude Include="Danmaku.h">
       <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\allocators.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\document.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\encodedstream.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\encodings.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\error\en.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\error\error.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\filereadstream.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\filewritestream.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\fwd.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\internal\biginteger.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\internal\diyfp.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\internal\dtoa.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\internal\ieee754.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\internal\itoa.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\internal\meta.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\internal\pow10.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\internal\regex.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\internal\stack.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\internal\strfunc.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\internal\strtod.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\internal\swap.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\istreamwrapper.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\memorybuffer.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\memorystream.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\msinttypes\inttypes.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\msinttypes\stdint.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\ostreamwrapper.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\pointer.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\prettywriter.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\rapidjson.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\reader.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\schema.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\stream.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\stringbuffer.h">
-      <Filter>头文件\RapidJSON</Filter>
-    </ClInclude>
-    <ClInclude Include="rapidjson\writer.h">
-      <Filter>头文件\RapidJSON</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

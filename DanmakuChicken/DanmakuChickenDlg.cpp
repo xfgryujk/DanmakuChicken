@@ -5,11 +5,15 @@
 #include "stdafx.h"
 #include "DanmakuChicken.h"
 #include "DanmakuChickenDlg.h"
-#include "afxdialogex.h"
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
+using namespace boost::property_tree;
+#include <codecvt>
+using namespace std;
 
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#endif
+//#ifdef _DEBUG
+//#define new DEBUG_NEW
+//#endif
 
 
 // CDanmakuChickenDlg 对话框
@@ -96,12 +100,26 @@ BOOL CDanmakuChickenDlg::OnInitDialog()
 	// 载入弹幕窗口
 	m_overlayDlg.Create(m_overlayDlg.IDD, GetDesktopWindow());
 
+	// 启动服务器
+	m_serverThread = thread([this] {
+		m_server.config.address = "127.0.0.1";
+		m_server.config.port = 12450;
+		m_server.resource["^/danmaku"]["POST"] = bind(&CDanmakuChickenDlg::HandleAddDanmaku, 
+			this, placeholders::_1, placeholders::_2);
+		m_server.start();
+	});
+
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
 void CDanmakuChickenDlg::OnDestroy()
 {
 	CDialogEx::OnDestroy();
+
+	// 停止服务器
+	m_server.stop();
+	if (m_serverThread.joinable())
+		m_serverThread.join();
 
 	// 关闭弹幕窗口
 	m_overlayDlg.DestroyWindow();
@@ -133,4 +151,30 @@ void CDanmakuChickenDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollB
 void CDanmakuChickenDlg::OnBnClickedButton2()
 {
 	m_overlayDlg.m_danmakuManager.AddDanmaku(_T("我能吞下玻璃而不伤身体"));
+}
+
+// 处理添加弹幕请求
+void CDanmakuChickenDlg::HandleAddDanmaku(shared_ptr<HttpServer::Response> response, shared_ptr<HttpServer::Request> request)
+{
+	try
+	{
+		ptree pt;
+		read_json(request->content, pt);
+
+		string contentA = pt.get<string>("content");
+		wstring_convert<codecvt<wchar_t, char, mbstate_t> > cv(new codecvt_utf8_utf16<wchar_t>);
+		wstring contentW = cv.from_bytes(contentA);
+
+		m_overlayDlg.m_danmakuManager.AddDanmaku(contentW.c_str());
+
+		*response << "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
+	}
+	catch(exception& e)
+	{
+		stringstream stream;
+		stream << R"({ "error": ")" << e.what() << R"(" })";
+		string content = stream.str();
+		*response << "HTTP/1.1 400 Bad Request\r\nContent-Length: " << content.size() << "\r\n\r\n"
+			<< content;
+	}
 }
