@@ -9,5 +9,5 @@ from danmaku_chicken import add_danmaku
 
 
 def onQQMessage(bot, contact, member, content):
-    if contact.qq == '414754582':
+    if contact.uin == '389947752':
         add_danmaku(content)

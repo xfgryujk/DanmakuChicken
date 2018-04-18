@@ -62,7 +62,7 @@ BOOL COverlayDlg::OnInitDialog()
 			m_bufferImg.ReleaseDC();
 			UpdateUI();
 
-			Sleep(1000 / 30); // 30fps
+			Sleep(1000 / 60); // 60fps
 		}
 	});
 

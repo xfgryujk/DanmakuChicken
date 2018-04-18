@@ -38,7 +38,7 @@ public:
 	// 弹幕字体大小
 	REAL m_danmakuSize = 40.0F;
 	// 弹幕滚动速度
-	int m_danmakuSpeed = 6;
+	int m_danmakuSpeed = 4;
 	// 弹幕不透明度
 	int m_danmakuAlpha = 255 * 80 / 100;
 

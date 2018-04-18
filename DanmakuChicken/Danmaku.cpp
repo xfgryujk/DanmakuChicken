@@ -50,7 +50,7 @@ DanmakuManager::DanmakuManager() :
 		while (!m_stopThreads)
 		{
 			UpdateDanmaku();
-			Sleep(1000 / 30); // 30fps
+			Sleep(1000 / 60); // 60fps
 		}
 	});
 }
