@@ -12,14 +12,19 @@ from qqbot import _bot as bot
 
 from danmaku_chicken import add_danmaku
 
+# 获取弹幕的群名
+GROUP_NAME = 'BUAA-飞梦ACG联盟'
+
 FILE_DIR = dirname(realpath(__file__))
 
 
 def onQQMessage(bot, contact, member, content):
     # print(contact.__dict__)
     # 由于腾讯关闭接口，QQ号已无法获取
-    if contact.name == 'BUAA-飞梦ACG联盟':
-        add_danmaku(content)
+    if contact.name == GROUP_NAME:
+        print(content)
+        if not add_danmaku(content):
+            print('添加弹幕失败！')
 
 
 def main():

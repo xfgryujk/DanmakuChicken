@@ -1,7 +1,7 @@
 DanmakuChicken
 =========
 
-弹幕鸡，一个在屏幕上显示弹幕的小程序。目前实现了从指定URL获取弹幕（后端请自己实现），和从QQ群获取弹幕（需要[QQBot](https://github.com/pandolia/qqbot)或[酷Q](https://cqp.cc/)）
+弹幕鸡，一个在屏幕上显示弹幕的小程序。目前实现了从指定URL获取弹幕（后端请自己实现）、从QQ群获取弹幕（需要[QQBot](https://github.com/pandolia/qqbot)或[酷Q](https://cqp.cc/)）、从B站直播获取弹幕
 
 ![screenshot](https://github.com/xfgryujk/DanmakuChicken/blob/master/screenshot.png)
 
@@ -23,6 +23,7 @@ DanmakuChicken
 │  └─Danmaku.cpp                 弹幕逻辑
 ├─python                         获取弹幕的Python程序
 │  ├─danmaku_chicken.py          弹幕鸡Python API
+│  ├─from_bilibili_live.py       从B站直播获取弹幕
 │  ├─from_coolq.py               从QQ群获取弹幕，安卓版QQ协议，需要酷Q
 │  ├─from_smartqq.py             从QQ群获取弹幕，SmartQQ协议，需要QQBot
 │  └─from_url.py                 从指定URL获取弹幕

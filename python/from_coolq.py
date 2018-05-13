@@ -21,6 +21,10 @@ from collections import namedtuple
 
 from danmaku_chicken import add_danmaku
 
+# 获取弹幕的群号
+GROUP_ID = '414754582'
+
+
 ClientHello = namedtuple("ClientHello", ("port",))
 ServerHello = namedtuple("ServerHello", ())
 
@@ -95,7 +99,7 @@ def load_frame(data):
     # decode text
     if isinstance(frame, (
             RcvdPrivateMessage, RcvdGroupMessage, RcvdDiscussMessage)):
-        payload[-1] = b64decode(payload[-1]).decode('gbk')
+        payload[-1] = b64decode(payload[-1]).decode('gb18030')
         frame = type(frame)(*payload)
     return frame
 
@@ -110,7 +114,7 @@ def dump_frame(frame):
     # encode text
     if isinstance(frame, (
             SendPrivateMessage, SendGroupMessage, SendDiscussMessage, Fatal)):
-        payload[-1] = b64encode(payload[-1].encode('gbk')).decode()
+        payload[-1] = b64encode(payload[-1].encode('gb18030')).decode()
 
     data = None
     for type_ in FRAME_TYPES:
@@ -214,8 +218,11 @@ def main():
 
     @qqbot.listener((RcvdGroupMessage,))
     def log(message):
-        if message.group == '414754582':
-            add_danmaku(RE_CQ_SPECIAL.sub('', message.text))
+        if message.group == GROUP_ID:
+            content = RE_CQ_SPECIAL.sub('', message.text)
+            print(content)
+            if not add_danmaku(content):
+                print('添加弹幕失败！')
 
     qqbot.start()
 
