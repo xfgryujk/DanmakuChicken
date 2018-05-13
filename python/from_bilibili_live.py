@@ -2,16 +2,18 @@
 
 """
 从B站直播获取弹幕
-https://github.com/lyyyuna/bilibili_danmu
+https://github.com/xfgryujk/blivedm
 """
 
-import asyncio
 import json
-import random
-import xml.dom.minidom
-from struct import pack, unpack
+import struct
+from asyncio import gather, sleep, CancelledError, get_event_loop
+from collections import namedtuple
+from enum import IntEnum
 
 import requests
+import websockets
+from websockets.exceptions import ConnectionClosed
 
 from danmaku_chicken import add_danmaku
 
@@ -19,180 +21,207 @@ from danmaku_chicken import add_danmaku
 ROOM_ID = 139
 
 
-class bilibiliClient():
-    def __init__(self, room_id):
-        self._CIDInfoUrl = 'http://live.bilibili.com/api/player?id=cid:'
-        self._roomId = room_id
-        self._ChatPort = 788
-        self._protocolversion = 1
-        self._reader = None
-        self._writer = None
-        self.connected = False
-        self._UserCount = 0
-        self._ChatHost = 'livecmt-1.bilibili.com'
-
-    async def connectServer(self):
-        print ('正在进入房间。。。。。')
-        r = requests.get('https://api.live.bilibili.com/room/v1/Room/room_init?id=' + str(self._roomId))
-        self._roomId = r.json()['data']['room_id']
-        r = requests.get(self._CIDInfoUrl + str(self._roomId))
-        if r.status_code == 200:
-            xml_string = '<root>' + r.text + '</root>'
-            dom = xml.dom.minidom.parseString(xml_string)
-            root = dom.documentElement
-            server = root.getElementsByTagName('server')
-            self._ChatHost = server[0].firstChild.data
-
-        reader, writer = await asyncio.open_connection(self._ChatHost, self._ChatPort)
-        self._reader = reader
-        self._writer = writer
-        print ('链接弹幕中。。。。。')
-        if (await self.SendJoinChannel(self._roomId) == True):
-            self.connected = True
-            print ('进入房间成功。。。。。')
-            print ('链接弹幕成功。。。。。')
-            await self.ReceiveMessageLoop()
-
-    async def HeartbeatLoop(self):
-        while self.connected == False:
-            await asyncio.sleep(0.5)
-
-        while self.connected == True:
-            await self.SendSocketData(0, 16, self._protocolversion, 2, 1, "")
-            await asyncio.sleep(30)
+class Operation(IntEnum):
+    SEND_HEARTBEAT = 2
+    POPULARITY = 3
+    COMMAND = 5
+    AUTH = 7
+    RECV_HEARTBEAT = 8
 
 
-    async def SendJoinChannel(self, channelId):
-        self._uid = (int)(100000000000000.0 + 200000000000000.0*random.random())
-        body = '{"roomid":%s,"uid":%s}' % (channelId, self._uid)
-        await self.SendSocketData(0, 16, self._protocolversion, 7, 1, body)
-        return True
+class BLiveClient:
+    ROOM_INIT_URL = 'https://api.live.bilibili.com/room/v1/Room/room_init'
+    WEBSOCKET_URL = 'wss://broadcastlv.chat.bilibili.com:2245/sub'
 
+    HEADER_STRUCT = struct.Struct('>I2H2I')
+    HeaderTuple = namedtuple('HeaderTuple', ('total_len', 'header_len', 'proto_ver', 'operation', 'sequence'))
 
-    async def SendSocketData(self, packetlength, magic, ver, action, param, body):
-        bytearr = body.encode('utf-8')
-        if packetlength == 0:
-            packetlength = len(bytearr) + 16
-        sendbytes = pack('!IHHII', packetlength, magic, ver, action, param)
-        if len(bytearr) != 0:
-            sendbytes = sendbytes + bytearr
-        self._writer.write(sendbytes)
-        await self._writer.drain()
+    def __init__(self, room_id, loop):
+        """
+        :param room_id: URL中的房间ID
+        """
+        self._short_id = room_id
+        self._room_id = None
+        self._websocket = None
+        # 未登录
+        self._uid = 0
 
+        self._loop = loop
+        self._future = None
 
-    async def ReceiveMessageLoop(self):
-        while self.connected == True:
-            tmp = await self._reader.read(4)
-            expr, = unpack('!I', tmp)
-            tmp = await self._reader.read(2)
-            tmp = await self._reader.read(2)
-            tmp = await self._reader.read(4)
-            num, = unpack('!I', tmp)
-            tmp = await self._reader.read(4)
-            num2 = expr - 16
+    def start(self):
+        # 获取房间ID
+        if self._room_id is None:
+            res = requests.get(self.ROOM_INIT_URL, {'id': self._short_id})
+            if res.status_code != 200:
+                raise ConnectionError()
+            else:
+                self._room_id = res.json()['data']['room_id']
 
-            if num2 != 0:
-                num -= 1
-                if num==0 or num==1 or num==2:
-                    tmp = await self._reader.read(4)
-                    num3, = unpack('!I', tmp)
-                    print ('房间人数为 %s' % num3)
-                    self._UserCount = num3
-                    continue
-                elif num==3 or num==4:
-                    tmp = await self._reader.read(num2)
-                    # strbytes, = unpack('!s', tmp)
-                    try: # 为什么还会出现 utf-8 decode error??????
-                        messages = tmp.decode('utf-8')
-                    except:
-                        continue
-                    self.parseDanMu(messages)
-                    continue
-                elif num==5 or num==6 or num==7:
-                    tmp = await self._reader.read(num2)
-                    continue
+        if self._future is not None:
+            return
+        self._future = gather(
+            self._message_loop(),
+            self._heartbeat_loop()
+        )
+        self._loop.run_until_complete(self._future)
+
+    def stop(self):
+        if self._future is None:
+            return
+        self._future.cancel()
+        self._future = None
+
+    def _make_packet(self, data, operation):
+        body = json.dumps(data).encode('utf-8')
+        header = self.HEADER_STRUCT.pack(
+            self.HEADER_STRUCT.size + len(body),
+            self.HEADER_STRUCT.size,
+            1,
+            operation,
+            1
+        )
+        return header + body
+
+    async def _message_loop(self):
+        while True:
+            try:
+                # 连接
+                async with websockets.connect(self.WEBSOCKET_URL) as websocket:
+                    self._websocket = websocket
+                    await self._send_auth()
+
+                    # 处理消息
+                    async for message in websocket:
+                        await self._handle_message(message)
+
+            except CancelledError:
+                break
+            except ConnectionClosed:
+                self._websocket = None
+                # 重连
+                print('掉线重连中')
+                await sleep(5)
+                continue
+            finally:
+                self._websocket = None
+
+    async def _send_auth(self):
+        auth_params = {
+            'uid':       self._uid,
+            'roomid':    self._room_id,
+            'protover':  1,
+            'platform':  'web',
+            'clientver': '1.4.0'
+        }
+        await self._websocket.send(self._make_packet(auth_params, Operation.AUTH))
+
+    async def _heartbeat_loop(self):
+        while True:
+            try:
+                if self._websocket is None:
+                    await sleep(0.5)
                 else:
-                    if num != 16:
-                        tmp = await self._reader.read(num2)
-                    else:
-                        continue
+                    await self._websocket.send(self._make_packet({}, Operation.SEND_HEARTBEAT))
+                    await sleep(30)
 
-    def parseDanMu(self, messages):
-        try:
-            dic = json.loads(messages)
-        except: # 有些情况会 jsondecode 失败，未细究，可能平台导致
-            return
-        cmd = dic['cmd']
-        if cmd == 'LIVE':
-            print ('直播开始。。。')
-            return
-        if cmd == 'PREPARING':
-            print ('房主准备中。。。')
-            return
-        if cmd == 'DANMU_MSG':
-            commentText = dic['info'][1]
-            commentUser = dic['info'][2][1]
-            isAdmin = dic['info'][2][2] == '1'
-            isVIP = dic['info'][2][3] == '1'
-            if isAdmin:
-                commentUser = '管理员 ' + commentUser
-            if isVIP:
-                commentUser = 'VIP ' + commentUser
+            except CancelledError:
+                break
+            except ConnectionClosed:
+                # 等待重连
+                continue
+
+    async def _handle_message(self, message):
+        offset = 0
+        while offset < len(message):
             try:
-                print (commentUser + ' say: ' + commentText)
-            except:
+                header = self.HeaderTuple(*self.HEADER_STRUCT.unpack_from(message, offset))
+            except struct.error:
+                break
+
+            if header.operation == Operation.POPULARITY:
+                popularity = int.from_bytes(message[offset + self.HEADER_STRUCT.size:
+                                                    offset + self.HEADER_STRUCT.size + 4]
+                                            , 'big')
+                await self._on_get_popularity(popularity)
+
+            elif header.operation == Operation.COMMAND:
+                body = message[offset + self.HEADER_STRUCT.size: offset + header.total_len]
+                body = json.loads(body.decode('utf-8'))
+                await self._handle_command(body)
+
+            elif header.operation == Operation.RECV_HEARTBEAT:
                 pass
+
+            else:
+                body = message[offset + self.HEADER_STRUCT.size: offset + header.total_len]
+                print('未知包类型：', header, body)
+
+            offset += header.total_len
+
+    async def _handle_command(self, command):
+        if isinstance(command, list):
+            for one_command in command:
+                await self._handle_command(one_command)
             return
-        if cmd == 'SEND_GIFT':
-            GiftName = dic['data']['giftName']
-            GiftUser = dic['data']['uname']
-            Giftrcost = dic['data']['rcost']
-            GiftNum = dic['data']['num']
-            try:
-                print(GiftUser + ' 送出了 ' + str(GiftNum) + ' 个 ' + GiftName)
-            except:
-                pass
-            return
-        if cmd == 'WELCOME':
-            commentUser = dic['data']['uname']
-            try:
-                print ('欢迎 ' + commentUser + ' 进入房间。。。。')
-            except:
-                pass
-            return
-        return
+
+        cmd = command['cmd']
+        # print(command)
+
+        if cmd == 'DANMU_MSG':        # 收到弹幕
+            await self._on_get_danmaku(command['info'][1], command['info'][2][1])
+
+        elif cmd == 'SEND_GIFT':      # 送礼物
+            pass
+
+        elif cmd == 'WELCOME':        # 欢迎
+            pass
+
+        elif cmd == 'WELCOME_GUARD':  # 欢迎房管
+            pass
+
+        elif cmd == 'SYS_MSG':        # 系统消息
+            pass
+
+        elif cmd == 'PREPARING':      # 房主准备中
+            pass
+
+        elif cmd == 'LIVE':           # 直播开始
+            pass
+
+        elif cmd == 'WISH_BOTTLE':    # 许愿瓶？
+            pass
+
+        else:
+            print('未知命令：', command)
+
+    async def _on_get_popularity(self, popularity):
+        """
+        获取到人气值
+        :param popularity: 人气值
+        """
+        pass
+
+    async def _on_get_danmaku(self, content, user_name):
+        """
+        获取到弹幕
+        :param content: 弹幕内容
+        :param user_name: 弹幕作者
+        """
+        pass
 
 
-class MyBilibiliClient(bilibiliClient):
-    def parseDanMu(self, messages):
-        try:
-            dic = json.loads(messages)
-        except: # 有些情况会 jsondecode 失败，未细究，可能平台导致
-            return
-
-        cmd = dic['cmd']
-        if cmd == 'DANMU_MSG':
-            content = dic['info'][1]
-            print(content)
-            if not add_danmaku(content):
-                print('添加弹幕失败！')
+class MyBLiveClient(BLiveClient):
+    async def _on_get_danmaku(self, content, user_name):
+        print(content)
+        if not add_danmaku(content):
+            print('添加弹幕失败！')
 
 
 def main():
-    danmuji = MyBilibiliClient(ROOM_ID)
-    loop = asyncio.get_event_loop()
-    while True:
-        tasks = [
-            danmuji.connectServer(),
-            danmuji.HeartbeatLoop()
-        ]
-        try:
-            loop.run_until_complete(asyncio.wait(tasks))
-        except KeyboardInterrupt:
-            break
-        except ConnectionAbortedError:
-            print('掉线重连中')
-            continue
+    loop = get_event_loop()
+    client = MyBLiveClient(ROOM_ID, loop)
+    client.start()
     loop.close()
 
 
